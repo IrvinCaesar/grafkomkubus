@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Phong + Shadows + Correct UVs</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.153.0/build/three.min.js"></script>
+
+<script>
+  // --- Scene Setup ---
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 2, 6);
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.body.appendChild(renderer.domElement);
+
+  // --- Lighting ---
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+  scene.add(ambientLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+  dirLight.position.set(5, 10, 5);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.width = 2048;
+  dirLight.shadow.mapSize.height = 2048;
+  dirLight.shadow.camera.near = 1;
+  dirLight.shadow.camera.far = 20;
+  dirLight.shadow.camera.left = -10;
+  dirLight.shadow.camera.right = 10;
+  dirLight.shadow.camera.top = 10;
+  dirLight.shadow.camera.bottom = -10;
+  scene.add(dirLight);
+
+  // --- Texture Load ---
+  const loader = new THREE.TextureLoader();
+  const uvTexture = loader.load('https://blenderartists.org/uploads/default/original/4X/c/e/3/ce3655f19d71d38b7e2450a086fd69901ca45c96.png');
+  uvTexture.encoding = THREE.sRGBEncoding;
+  uvTexture.wrapS = uvTexture.wrapT = THREE.RepeatWrapping;
+
+  // --- Cube (emissive + phong, bigger texture) ---
+  uvTexture.repeat.set(1, 1); // normal size for cube
+
+  const cubeMat = new THREE.MeshPhongMaterial({
+    map: uvTexture,
+    emissive: new THREE.Color(0xffffff),
+    emissiveIntensity: 0.3,
+    shininess: 50,
+    specular: new THREE.Color(0x888888)
+  });
+
+  const cubeGeo = new THREE.BoxGeometry(1,1,1);
+  const cube = new THREE.Mesh(cubeGeo, cubeMat);
+  cube.position.x = -2;
+  cube.castShadow = true;
+  cube.receiveShadow = true;
+  scene.add(cube);
+
+  // --- Sphere (flip UV.y to fix upside down) ---
+  const sphereGeo = new THREE.SphereGeometry(0.75, 32, 32);
+  const uvAttrSphere = sphereGeo.attributes.uv;
+  for (let i = 0; i < uvAttrSphere.count; i++) {
+    uvAttrSphere.setY(i, 1 - uvAttrSphere.getY(i));
+  }
+  uvAttrSphere.needsUpdate = true;
+
+  const sphereMat = new THREE.MeshPhongMaterial({
+    map: uvTexture,
+    shininess: 50,
+    specular: new THREE.Color(0x888888)
+  });
+  const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+  sphere.position.x = 0;
+  sphere.castShadow = true;
+  sphere.receiveShadow = true;
+  scene.add(sphere);
+
+  // --- Prism (custom UV mapping for proper upright texture and flip Y) ---
+  const prismGeo = new THREE.ConeGeometry(1, 1.5, 3, 1, false);
+  const posAttr = prismGeo.attributes.position;
+  const uvAttrPrism = prismGeo.attributes.uv;
+  for (let i = 0; i < uvAttrPrism.count; i++) {
+    const x = posAttr.getX(i);
+    const y = posAttr.getY(i);
+    const z = posAttr.getZ(i);
+
+    // calculate angle around Y axis (0 to 2pi)
+    let angle = Math.atan2(z, x);
+    if (angle < 0) angle += Math.PI * 2;
+
+    const u = angle / (Math.PI * 2);
+    const v = 1 - (y / 1.5); // flip Y to fix upside down
+
+    uvAttrPrism.setXY(i, u, v);
+  }
+  uvAttrPrism.needsUpdate = true;
+
+  const prismMat = new THREE.MeshPhongMaterial({
+    map: uvTexture,
+    shininess: 50,
+    specular: new THREE.Color(0x888888),
+    flatShading: true
+  });
+
+  const prism = new THREE.Mesh(prismGeo, prismMat);
+  prism.position.x = 2;
+  prism.castShadow = true;
+  prism.receiveShadow = true;
+  prism.rotation.y = 0; // ensure texture upright
+  scene.add(prism);
+
+  // --- Ground Plane ---
+  const groundMat = new THREE.MeshPhongMaterial({
+    map: uvTexture,
+    shininess: 10,
+    specular: new THREE.Color(0x222222),
+    side: THREE.DoubleSide
+  });
+  const groundGeo = new THREE.PlaneGeometry(10, 10);
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -1;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  // --- Camera controls (fake orbit) ---
+  let isDragging = false;
+  let prevMousePos = { x: 0, y: 0 };
+  let theta = 0;
+  let phi = 0;
+  let radius = 6;
+
+  function updateCameraPosition() {
+    const x = radius * Math.sin(theta) * Math.cos(phi);
+    const z = radius * Math.cos(theta) * Math.cos(phi);
+    const y = radius * Math.sin(phi);
+    camera.position.set(x, y, z);
+    camera.lookAt(0, 0, 0);
+  }
+  updateCameraPosition();
+
+  document.addEventListener('mousedown', e => {
+    isDragging = true;
+    prevMousePos.x = e.clientX;
+    prevMousePos.y = e.clientY;
+  });
+
+  document.addEventListener('mouseup', () => isDragging = false);
+
+  document.addEventListener('mousemove', e => {
+    if (isDragging) {
+      const deltaX = e.clientX - prevMousePos.x;
+      const deltaY = e.clientY - prevMousePos.y;
+      theta -= deltaX * 0.005;
+      phi -= deltaY * 0.005;
+      phi = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, phi));
+      prevMousePos.x = e.clientX;
+      prevMousePos.y = e.clientY;
+      updateCameraPosition();
+    }
+  });
+
+  // --- Animation Loop ---
+  function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  // --- Resize Handler ---
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+
+</body>
+</html>

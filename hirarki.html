@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hierarki Kubus dengan Bola (Three.js)</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+
+<script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@latest/build/three.module.js';
+
+    // Scene, Camera, Renderer
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Geometry + Material for cube (wireframe)
+    const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+    const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+
+    // Add cube to the scene
+    scene.add(cube);
+
+    // Create sphere geometry and material (also wireframe)
+    const sphereGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+    const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+
+    // Sphere 1
+    const sphere1 = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    sphere1.position.set(0.75, 0.75, 0.75); // corner of the cube
+    cube.add(sphere1); // attach to cube (hierarchy!)
+
+    // Sphere 2
+    const sphere2 = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    sphere2.position.set(-0.75, -0.75, -0.75); // opposite corner
+    cube.add(sphere2); // also attach to cube
+
+    // Camera position
+    camera.position.z = 5;
+
+    // Animation loop
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Rotate the parent cube
+        cube.rotation.x += 0.01;
+        cube.rotation.y += 0.01;
+
+        // Since spheres are children of cube, they rotate with it!
+        renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Responsive resize
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+
+</body>
+</html>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>UV Grid</title>
+  <title>UV Grid Emissive Cube</title>
   <style>
     body { margin: 0; overflow: hidden; }
     canvas { display: block; }
@@ -20,22 +20,34 @@
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
+  // --- Lighting (pure white, no tint) ---
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+  scene.add(ambientLight);
+
+  const pointLight = new THREE.PointLight(0xffffff, 1);
+  pointLight.position.set(0, 5, 5);
+  scene.add(pointLight);
+
   // --- UV Grid Texture ---
   const loader = new THREE.TextureLoader();
   const uvTexture = loader.load('https://blenderartists.org/uploads/default/original/4X/c/e/3/ce3655f19d71d38b7e2450a086fd69901ca45c96.png');
 
-  // --- Cube ---
-  const cube = new THREE.Mesh(
-    new THREE.BoxGeometry(1,1,1),
-    new THREE.MeshBasicMaterial({ map: uvTexture })
-  );
+// --- Emissive Cube (soft glow) ---
+const cube = new THREE.Mesh(
+  new THREE.BoxGeometry(1, 1, 1),
+  new THREE.MeshStandardMaterial({
+    map: uvTexture,
+    emissive: new THREE.Color(0xffffff),
+    emissiveIntensity: 0.4
+  })
+);
   cube.position.x = -2;
   scene.add(cube);
 
   // --- Sphere ---
   const sphere = new THREE.Mesh(
     new THREE.SphereGeometry(0.75, 32, 32),
-    new THREE.MeshBasicMaterial({ map: uvTexture })
+    new THREE.MeshStandardMaterial({ map: uvTexture })
   );
   sphere.position.x = 0;
   scene.add(sphere);
@@ -43,7 +55,7 @@
   // --- Prism ---
   const prism = new THREE.Mesh(
     new THREE.ConeGeometry(1, 1.5, 3),
-    new THREE.MeshBasicMaterial({ map: uvTexture })
+    new THREE.MeshStandardMaterial({ map: uvTexture })
   );
   prism.position.x = 2;
   scene.add(prism);
@@ -51,13 +63,13 @@
   // --- Ground Plane ---
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(10, 10),
-    new THREE.MeshBasicMaterial({ map: uvTexture, side: THREE.DoubleSide })
+    new THREE.MeshStandardMaterial({ map: uvTexture, side: THREE.DoubleSide })
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -1;
   scene.add(ground);
 
-  // --- Fake Orbit Cam Logic ---
+  // --- Fake Orbit Cam ---
   let isDragging = false;
   let prevMousePos = { x: 0, y: 0 };
   let theta = 0;
@@ -80,22 +92,17 @@
     prevMousePos.y = e.clientY;
   });
 
-  document.addEventListener('mouseup', () => {
-    isDragging = false;
-  });
+  document.addEventListener('mouseup', () => isDragging = false);
 
   document.addEventListener('mousemove', e => {
     if (isDragging) {
       const deltaX = e.clientX - prevMousePos.x;
       const deltaY = e.clientY - prevMousePos.y;
-
       theta -= deltaX * 0.005;
       phi -= deltaY * 0.005;
       phi = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, phi));
-
       prevMousePos.x = e.clientX;
       prevMousePos.y = e.clientY;
-
       updateCameraPosition();
     }
   });

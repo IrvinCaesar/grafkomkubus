@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kubus Animasi Three.js Tanpa Lighting</title>
+    <style>
+        /* CSS untuk memastikan canvas mengisi seluruh jendela browser */
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+
+<script type="module">
+    // Mengimpor library Three.js
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@latest/build/three.module.js';
+
+    // --- Setup Scene, Camera, dan Renderer ---
+
+    // 1. Membuat Scene: Wadah untuk semua objek, kamera, dan cahaya
+    const scene = new THREE.Scene();
+
+    // 2. Membuat Camera: Menentukan sudut pandang
+    // PerspectiveCamera( fov, aspect, near, far )
+    // fov: Field of view (sudut pandang vertikal, dalam derajat)
+    // aspect: Rasio lebar/tinggi (biasanya width / height dari canvas)
+    // near: Bidang potong terdekat (objek di depan ini tidak terlihat)
+    // far: Bidang potong terjauh (objek di belakang ini tidak terlihat)
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+    // 3. Membuat Renderer: Merender scene dari sudut pandang kamera ke kanvas
+    const renderer = new THREE.WebGLRenderer();
+    // Mengatur ukuran renderer sesuai ukuran jendela browser
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    // Menambahkan elemen canvas renderer ke body dokumen HTML
+    document.body.appendChild(renderer.domElement);
+
+    // --- Membuat Kubus ---
+
+    // 4. Membuat Geometry: Menentukan bentuk objek (kubus)
+    // BoxGeometry( width, height, depth )
+    const geometry = new THREE.BoxGeometry(1, 1, 1); // Kubus dengan sisi 1 unit
+
+    // 5. Membuat Material: Menentukan bagaimana permukaan objek terlihat
+    // MeshBasicMaterial tidak terpengaruh oleh cahaya, hanya warna dasar
+    // Ini memenuhi permintaan "tanpa lighting"
+    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Warna hijau
+
+    // 6. Membuat Mesh: Menggabungkan geometry dan material
+    const cube = new THREE.Mesh(geometry, material);
+
+    // 7. Menambahkan kubus ke scene
+    scene.add(cube);
+
+    // 8. Mengatur posisi kamera agar bisa melihat kubus
+    // Kubus defaultnya ada di posisi (0,0,0)
+    camera.position.z = 5; // Memindahkan kamera 5 unit ke sumbu Z positif
+
+    // --- Loop Animasi ---
+
+    // 9. Membuat fungsi animasi (loop rendering)
+    function animate() {
+        // Meminta browser untuk memanggil fungsi ini lagi di frame berikutnya
+        requestAnimationFrame(animate);
+
+        // Mengubah rotasi kubus di setiap frame untuk membuat animasi
+        cube.rotation.x += 0.01;
+        cube.rotation.y += 0.01;
+        // Anda juga bisa mengubah rotasi di sumbu Z:
+        // cube.rotation.z += 0.01;
+
+        // Merender scene dari sudut pandang kamera
+        renderer.render(scene, camera);
+    }
+
+    // 10. Memulai loop animasi
+    animate();
+
+    // --- Penanganan Perubahan Ukuran Jendela ---
+
+    // Fungsi untuk memperbarui kamera dan renderer saat ukuran jendela berubah
+    window.addEventListener('resize', () => {
+        // Memperbarui aspect ratio kamera
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix(); // Memperbarui matriks proyeksi kamera
+
+        // Memperbarui ukuran renderer
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+</script>
+
+</body>
+</html>

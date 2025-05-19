@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>UV Grid Party</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+
+<script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@latest/build/three.module.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@latest/examples/jsm/controls/OrbitControls.js';
+
+    // --- Scene Setup ---
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 2, 5);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // --- OrbitControls Setup ---
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(0, 0, 0);
+    controls.update();
+
+    let orbitEnabled = true;
+
+    // Toggle orbit controls with the "O" key
+    window.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 'o') {
+            orbitEnabled = !orbitEnabled;
+            controls.enabled = orbitEnabled;
+            console.log(`OrbitControls: ${orbitEnabled ? 'Enabled' : 'Disabled'}`);
+        }
+    });
+
+    // --- Load UV Grid Texture ---
+    const loader = new THREE.TextureLoader();
+    const uvTexture = loader.load('https://blenderartists.org/uploads/default/original/4X/c/e/3/ce3655f19d71d38b7e2450a086fd69901ca45c96.png');
+
+    // --- Create Cube ---
+    const cube = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 1, 1),
+        new THREE.MeshBasicMaterial({ map: uvTexture })
+    );
+    cube.position.x = -2;
+    scene.add(cube);
+
+    // --- Create Sphere ---
+    const sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.75, 32, 32),
+        new THREE.MeshBasicMaterial({ map: uvTexture })
+    );
+    sphere.position.x = 0;
+    scene.add(sphere);
+
+    // --- Create Prism (Triangular Pyramid) ---
+    const prism = new THREE.Mesh(
+        new THREE.ConeGeometry(1, 1.5, 3),
+        new THREE.MeshBasicMaterial({ map: uvTexture })
+    );
+    prism.position.x = 2;
+    scene.add(prism);
+
+    // --- Create Ground Plane ---
+    const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(10, 10),
+        new THREE.MeshBasicMaterial({ map: uvTexture, side: THREE.DoubleSide })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -1;
+    scene.add(ground);
+
+    // --- Animation Loop ---
+    function animate() {
+        requestAnimationFrame(animate);
+        if (orbitEnabled) controls.update();
+        renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // --- Handle Resize ---
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+
+</body>
+</html>
